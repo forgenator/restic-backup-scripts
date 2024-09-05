@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# Add these to your .bashrc or similar
-# Restic conf
-#export RESTIC_REPOSITORY="repository-url"
-#export RESTIC_PASSWORD="password-for-repository"
-
 # Call this script like this
 # resctic-backup.sh "tag" "directory_to_backup"
 
@@ -13,13 +8,13 @@
 
 # Static configuration
 RESTIC=/usr/bin/restic
-LOGFILE=/home/$USER/restic.log
 TAG=$1
 BACKUP_DIRECTORY=$2
+LOGFILE=/home/$USER/restic-$TAG.log
 
 # Gotify conf
 GOTIFY_URL="https://host.domain.tld"
-GOTIFY_TOKEN="xxxx"
+GOTIFY_TOKEN="xxx"
 
 # Gotify notification
 notify()
@@ -31,6 +26,9 @@ notify()
                 "${GOTIFY_URL}/message?token=${GOTIFY_TOKEN}"
 
 }
+
+# Start of log event
+echo "-----------------------------------" >> $LOGFILE
 
 # Run backup
 if $RESTIC backup --tag $TAG $BACKUP_DIRECTORY >> $LOGFILE 2>&1; then
@@ -49,6 +47,12 @@ $RESTIC forget \
 
 # Remove unneeded data from the repository
 $RESTIC prune >> $LOGFILE 2>&1
+
+# Check the repository for errors
+$RESTIC check >> $LOGFILE 2>&1
+
+# Done
+echo "-----------------------------------" >> $LOGFILE
 
 # Check the repository for errors
 $RESTIC check >> $LOGFILE 2>&1
