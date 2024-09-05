@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Add these to your .bashrc or similar
+# Restic conf
+export RESTIC_REPOSITORY="repository-url"
+export RESTIC_PASSWORD="password-for-repository"
+
 # Call this script like this
 # resctic-backup.sh "tag" "directory_to_backup"
 
@@ -8,13 +13,13 @@
 
 # Static configuration
 RESTIC=/usr/bin/restic
-CONFIG=/home/$USER/.config/restic/env.conf
 LOGFILE=/home/$USER/restic.log
 TAG=$1
 BACKUP_DIRECTORY=$2
 
-# Get the environment also in this file, in case it's not read properly
-. $CONFIG
+# Gotify conf
+GOTIFY_URL="https://host.domain.tld"
+GOTIFY_TOKEN="xxxx"
 
 # Gotify notification
 notify()
@@ -28,28 +33,22 @@ notify()
 }
 
 # Run backup
-if $RESTIC backup \
-            --tag $TAG \ # Tag to apply to the backup
-            $BACKUP_DIRECTORY \ # Directory to backup
-            >> $LOGFILE 2>&1; 
-then
-  echo "$TIMESTAMP Restic backup succesfull" >> $LOGFILE
+if $RESTIC backup --tag $TAG $BACKUP_DIRECTORY >> $LOGFILE 2>&1; then
   notify "Restic backup succesfull" "Succesfull backup of $BACKUP_DIRECTORY" 
 else
-  echo "$TIMESTAMP Restic backup went wrong" >> $LOGFILE
   notify "Restic backup broken" "Backup of $BACKUP_DIRECTORY didn't went trough." 
 fi
-          
 
 # Remove snapshots according to policy
 $RESTIC forget \
             --keep-daily 7 \
             --keep-weekly 4 \
             --keep-monthly 12 \
-            --keep-yearly 7
+            --keep-yearly 7 \
+	    >> $LOGFILE 2>&1
 
 # Remove unneeded data from the repository
-$RESTIC prune
+$RESTIC prune >> $LOGFILE 2>&1
 
 # Check the repository for errors
-$RESTIC check
+$RESTIC check >> $LOGFILE 2>&1
