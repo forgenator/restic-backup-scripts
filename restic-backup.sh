@@ -2,8 +2,8 @@
 
 # Add these to your .bashrc or similar
 # Restic conf
-export RESTIC_REPOSITORY="repository-url"
-export RESTIC_PASSWORD="password-for-repository"
+#export RESTIC_REPOSITORY="repository-url"
+#export RESTIC_PASSWORD="password-for-repository"
 
 # Call this script like this
 # resctic-backup.sh "tag" "directory_to_backup"
