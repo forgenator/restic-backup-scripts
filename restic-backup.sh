@@ -1,58 +1,52 @@
 #!/bin/bash
 
-# Call this script like this
-# resctic-backup.sh "tag" "directory_to_backup"
+# Call this script like this while logged in
+# resctic-backup.sh "/directories/to/backup /separated/by/space"
 
-# Run cron every midnight
-# 0 0 * * * /path/to/restic-backup.sh "tag" "directory_to_backup"
+# Backup everything to restic server 01:00
+#00 01 * * * BASH_ENV=~/.bashrc bash -l -c '~/scripts/restic-backup.sh "/directories/to/backup /separated/by/space" 2>&1 | logger -t restic-backup'
+
+# Restic conf
+#export RESTIC_REPOSITORY="rest:https://user:pass@host.domain.tld"
+#export RESTIC_REPOSITORY="/path/to/restic/repo"
+#export RESTIC_PASSWORD="repository-pass"
 
 # Static configuration
 RESTIC=/usr/bin/restic
-TAG=$1
-BACKUP_DIRECTORY=$2
-LOGFILE=/home/$USER/restic-$TAG.log
+BACKUP_DIRECTORIES=$1
+LOGFILE=/home/holvi/logs/restic.log
 
 # Gotify conf
 GOTIFY_URL="https://host.domain.tld"
-GOTIFY_TOKEN="xxx"
+GOTIFY_TOKEN="token"
 
 # Gotify notification
 notify()
 {
-        curl -X POST -s \
-                -F "title=${1}" \
-                -F "message=${2}" \
-                -F "priority=5" \
-                "${GOTIFY_URL}/message?token=${GOTIFY_TOKEN}"
+  curl -X POST -s \
+    -F "title=${1}" \
+    -F "message=${2}" \
+    -F "priority=5" \
+    "${GOTIFY_URL}/message?token=${GOTIFY_TOKEN}"
 
 }
 
-# Start of log event
-echo "-----------------------------------" >> $LOGFILE
-
 # Run backup
-if $RESTIC backup --tag $TAG $BACKUP_DIRECTORY >> $LOGFILE 2>&1; then
-  notify "Restic backup succesfull" "Succesfull backup of $BACKUP_DIRECTORY" 
-else
-  notify "Restic backup broken" "Backup of $BACKUP_DIRECTORY didn't went trough." 
-fi
-
-# Remove snapshots according to policy
-$RESTIC forget \
+if $RESTIC -v backup $BACKUP_DIRECTORIES; then
+  # Remove snapshots according to policy
+  $RESTIC forget \
             --keep-daily 7 \
             --keep-weekly 4 \
             --keep-monthly 12 \
-            --keep-yearly 7 \
-	    >> $LOGFILE 2>&1
+            --keep-yearly 6
 
-# Remove unneeded data from the repository
-$RESTIC prune >> $LOGFILE 2>&1
+  # Remove unneeded data from the repository
+  $RESTIC prune
 
-# Check the repository for errors
-$RESTIC check >> $LOGFILE 2>&1
+  # Check the repository for errors
+  $RESTIC check
 
-# Done
-echo "-----------------------------------" >> $LOGFILE
-
-# Check the repository for errors
-$RESTIC check >> $LOGFILE 2>&1
+  notify "Restic backup succesfull" "Succesfull backup of $BACKUP_DIRECTORIES"
+else
+  notify "Restic backup broken" "Broken backup of $BACKUP_DIRECTORIES"
+fi
